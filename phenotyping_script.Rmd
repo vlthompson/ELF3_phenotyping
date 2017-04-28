@@ -1,0 +1,118 @@
+---
+title: "ELF3_script"
+author: "Veronica"
+date: "4/28/2017"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(plyr)
+library(tidyverse)
+library(reshape2)
+library(lmerTest)
+library(lme4)
+```
+
+Save files as CSVs to avoid errors reading them
+```{r}
+raw <- read.csv("ELF3_phenotyping.csv")
+```
+
+Quick formatting for raw data file
+```{r}
+raw2 <- subset(raw, raw$genotype!="HA412") 
+raw2$days <- as.Date(as.character(raw2$measurement_date), format="%d/%m/%Y")-
+  as.Date(as.character(raw2$germination_date), format="%d/%m/%Y")
+raw2$days <- as.numeric(raw2$days)
+a <-ncol(raw2)
+raw2 <- raw2[,c(1:3, a, a-1, a-2, 7:a-3)]
+raw2$genotype <- relevel(raw2$genotype, ref = "GV_WT")
+```
+
+If making multiple plots, set a directory here to save them in
+```{r}
+today <- Sys.Date()
+today <- format(today, "%d_%b_%Y")
+file.n <- paste("plots_",today, sep = "")
+dir.create(file.n)
+setwd(file.n)
+```
+
+
+
+### Flowers
+Load and process raw data file
+```{r}
+raw.flower <- read.csv("ELF3_flowering.csv")
+flwr <- raw.flower[raw.flower$ugly!=TRUE, ]
+flwr$genotype <- relevel(flwr$genotype, ref = "GV_WT")
+
+flwr$days.p <- as.Date(as.character(flwr$petals), format="%d/%m/%Y")-
+  as.Date(as.character(flwr$germ), format="%d/%m/%Y")
+flwr$days.p <- as.numeric(flwr$days.p)
+flwr$days.a <- as.Date(as.character(flwr$anthesis), format="%d/%m/%Y")-
+  as.Date(as.character(flwr$germ), format="%d/%m/%Y")
+flwr$days.a <- as.numeric(flwr$days.a)
+flwr$days.f <- as.Date(as.character(flwr$final), format="%d/%m/%Y")-
+  as.Date(as.character(flwr$germ), format="%d/%m/%Y")
+flwr$days.f <- as.numeric(flwr$days.f)
+flwr$days.p2a <- as.Date(as.character(flwr$anthesis), format="%d/%m/%Y")-
+  as.Date(as.character(flwr$petals), format="%d/%m/%Y")
+flwr$days.p2a <- as.numeric(flwr$days.p2a)
+flwr$days.a2f <- as.Date(as.character(flwr$final), format="%d/%m/%Y")-
+  as.Date(as.character(flwr$anthesis), format="%d/%m/%Y")
+flwr$days.a2f <- as.numeric(flwr$days.a2f)
+```
+
+Days to petals
+```{r days_to_petals}
+flower.pg <- ggplot(flwr, aes(genotype, days.p))
+flower.pg + geom_boxplot() +
+  geom_point() +
+  ggtitle("Days to petal emergence") + 
+  xlab("Genotype") + 
+  ylab("Days") +
+  theme(plot.title = element_text(hjust = .5)) 
++ 
+  facet_grid(. ~ germ)
+
+flower.p.lmer <- lmer(days.p ~ genotype + (1|germ), data=flwr)
+summary(flower.p.lmer)
+```
+
+Days from Petal to Anthesis
+```{r}
+ggplot(flwr, aes(genotype, days.p2a))+ 
+  geom_boxplot() +
+  geom_point() +
+  ggtitle("Days between petal development to anthesis") + 
+  xlab("Genotype") + 
+  ylab("Days") +
+  theme(plot.title = element_text(hjust = .5)) + 
+  facet_grid(.~germ)
+
+flwr.p2a.lmer <- lmer(days.p2a ~ genotype + (1|germ), data=flwr)
+summary(flwr.p2a.lmer)
+```
+
+
+Head diameter
+```{r}
+ggplot(flwr, aes(genotype, diameter)) + 
+  geom_boxplot() +
+  geom_point() +
+  ggtitle("Mature Head diameter") + 
+  xlab("Genotype") + 
+  ylab("Diameter (cm)") +
+  theme(plot.title = element_text(hjust = .5)) 
+
+flwr.diameter.lmer <- lmer(diameter ~ genotype + (1|germ), data=flwr)
+summary(flwr.diameter.lmer)
+```
+
