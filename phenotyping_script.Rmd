@@ -1,7 +1,7 @@
 ---
-title: "ELF3_script"
+title: "Phenotyping_script2"
 author: "Veronica"
-date: "4/28/2017"
+date: "6/13/2017"
 output: 
   html_document: 
     keep_md: yes
@@ -9,9 +9,6 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r, include=FALSE}
 library(plyr)
 library(tidyverse)
 library(reshape2)
@@ -19,100 +16,159 @@ library(lmerTest)
 library(lme4)
 ```
 
-Save files as CSVs to avoid errors reading them
+## Final Phenotyping Data
+
+### Load Data  
 ```{r}
-raw <- read.csv("ELF3_phenotyping.csv")
+(raw.flower <- read_csv("ELF3_flowering.csv", locale = locale(date_format = "%d/%m/%Y")))
+ 
+(flower <- raw.flower %>%
+#  col_types = cols(
+#    genotype = col_factor(levels = "GV_WT", "ELF3_mutant")) %>%
+  filter(ugly == FALSE) %>% 
+  mutate(
+    days.g2p = parse_integer(petals - germ),
+    days.p2a = parse_integer(anthesis - petals),
+    days.a2f = parse_integer(final - anthesis),
+    days.g2a = parse_integer(anthesis - germ),
+    days.g2f = parse_integer(final - germ), 
+    leaf_node = leaves / internodes))
+
+flower$genotype <- factor(flower$genotype, levels = c("GV_WT", "ELF3_mutant"))
 ```
 
-Quick formatting for raw data file
+### Flowering Time  
 ```{r}
-raw2 <- subset(raw, raw$genotype!="HA412") 
-raw2$days <- as.Date(as.character(raw2$measurement_date), format="%d/%m/%Y")-
-  as.Date(as.character(raw2$germination_date), format="%d/%m/%Y")
-raw2$days <- as.numeric(raw2$days)
-a <-ncol(raw2)
-raw2 <- raw2[,c(1:3, a, a-1, a-2, 7:a-3)]
-raw2$genotype <- relevel(raw2$genotype, ref = "GV_WT")
-```
-
-If making multiple plots, set a directory here to save them in
-```{r}
-today <- Sys.Date()
-today <- format(today, "%d_%b_%Y")
-file.n <- paste("plots_",today, sep = "")
-dir.create(file.n)
-setwd(file.n)
-```
-
-
-
-### Flowers
-Load and process raw data file
-```{r}
-raw.flower <- read.csv("ELF3_flowering.csv")
-flwr <- raw.flower[raw.flower$ugly!=TRUE, ]
-flwr$genotype <- relevel(flwr$genotype, ref = "GV_WT")
-
-flwr$days.p <- as.Date(as.character(flwr$petals), format="%d/%m/%Y")-
-  as.Date(as.character(flwr$germ), format="%d/%m/%Y")
-flwr$days.p <- as.numeric(flwr$days.p)
-flwr$days.a <- as.Date(as.character(flwr$anthesis), format="%d/%m/%Y")-
-  as.Date(as.character(flwr$germ), format="%d/%m/%Y")
-flwr$days.a <- as.numeric(flwr$days.a)
-flwr$days.f <- as.Date(as.character(flwr$final), format="%d/%m/%Y")-
-  as.Date(as.character(flwr$germ), format="%d/%m/%Y")
-flwr$days.f <- as.numeric(flwr$days.f)
-flwr$days.p2a <- as.Date(as.character(flwr$anthesis), format="%d/%m/%Y")-
-  as.Date(as.character(flwr$petals), format="%d/%m/%Y")
-flwr$days.p2a <- as.numeric(flwr$days.p2a)
-flwr$days.a2f <- as.Date(as.character(flwr$final), format="%d/%m/%Y")-
-  as.Date(as.character(flwr$anthesis), format="%d/%m/%Y")
-flwr$days.a2f <- as.numeric(flwr$days.a2f)
-```
-
-Days to petals
-```{r days_to_petals}
-flower.pg <- ggplot(flwr, aes(genotype, days.p))
-flower.pg + geom_boxplot() +
-  geom_point() +
-  ggtitle("Days to petal emergence") + 
+flower %>%
+  ggplot(aes(genotype, days.g2p)) +
+  geom_boxplot() +
+  ggtitle("DAS to petal emergence") + 
   xlab("Genotype") + 
   ylab("Days") +
   theme(plot.title = element_text(hjust = .5)) 
-+ 
-  facet_grid(. ~ germ)
+summary(lmer(days.g2p ~ genotype + (1|germ), data=flower))
 
-flower.p.lmer <- lmer(days.p ~ genotype + (1|germ), data=flwr)
-summary(flower.p.lmer)
-```
-
-Days from Petal to Anthesis
-```{r}
-ggplot(flwr, aes(genotype, days.p2a))+ 
+flower %>%
+  ggplot(aes(genotype, days.p2a)) +
   geom_boxplot() +
-  geom_point() +
-  ggtitle("Days between petal development to anthesis") + 
+  ggtitle("Days from petal emergence to anthesis") + 
   xlab("Genotype") + 
   ylab("Days") +
-  theme(plot.title = element_text(hjust = .5)) + 
-  facet_grid(.~germ)
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(days.p2a ~ genotype + (1|germ), data=flower))
 
-flwr.p2a.lmer <- lmer(days.p2a ~ genotype + (1|germ), data=flwr)
-summary(flwr.p2a.lmer)
+flower %>%
+  ggplot(aes(genotype, days.a2f)) +
+  geom_boxplot() +
+  ggtitle("Duration of anthesis") + 
+  xlab("Genotype") + 
+  ylab("Days") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(days.a2f ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, days.g2a)) +
+  geom_boxplot() +
+  ggtitle("DAS to anthesis") + 
+  xlab("Genotype") + 
+  ylab("Days") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(days.g2a ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, days.g2f)) +
+  geom_boxplot() +
+  ggtitle("DAS to anthesis") + 
+  xlab("Genotype") + 
+  ylab("Days") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(days.g2f ~ genotype + (1|germ), data=flower))
 ```
 
-
-Head diameter
+### Head, Height, Leaves  
 ```{r}
-ggplot(flwr, aes(genotype, diameter)) + 
+flower %>%
+  ggplot(aes(genotype, Head_diameter)) +
   geom_boxplot() +
-  geom_point() +
-  ggtitle("Mature Head diameter") + 
+  ggtitle("Head diameter") + 
   xlab("Genotype") + 
   ylab("Diameter (cm)") +
   theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(Head_diameter ~ genotype + (1|germ), data=flower))
 
-flwr.diameter.lmer <- lmer(diameter ~ genotype + (1|germ), data=flwr)
-summary(flwr.diameter.lmer)
+flower %>%
+  ggplot(aes(genotype, final_height)) +
+  geom_boxplot() +
+  ggtitle("Mature height") + 
+  xlab("Genotype") + 
+  ylab("Height (cm)") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(final_height ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, internodes)) +
+  geom_boxplot() +
+  ggtitle("Number of internodes") + 
+  xlab("Genotype") + 
+  ylab("Number") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(internodes ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, leaves)) +
+  geom_boxplot() +
+  ggtitle("Number of leaves") + 
+  xlab("Genotype") + 
+  ylab("Number") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(leaves ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, leaf_node)) +
+  geom_boxplot() +
+  ggtitle("Leaves per internodes") + 
+  xlab("Genotype") + 
+  ylab("Number leaves:Number internodes") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(leaf_node ~ genotype + (1|germ), data=flower))
+```
+
+### Stem circumfrence  
+```{r}
+flower %>%
+  ggplot(aes(genotype, stem_circ_1)) +
+  geom_boxplot() +
+  ggtitle("Stem circumfrence, internode 1") + 
+  xlab("Genotype") + 
+  ylab("Circumfrence (cm)") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(stem_circ_1 ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, stem_circ_2)) +
+  geom_boxplot() +
+  ggtitle("Stem circumfrence, internode 2") + 
+  xlab("Genotype") + 
+  ylab("Circumfrence (cm)") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(stem_circ_2 ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, stem_circ_3)) +
+  geom_boxplot() +
+  ggtitle("Stem circumfrence, mid-stem") + 
+  xlab("Genotype") + 
+  ylab("Circumfrence (cm)") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(stem_circ_3 ~ genotype + (1|germ), data=flower))
+
+flower %>%
+  ggplot(aes(genotype, stem_circ_4)) + 
+  geom_boxplot() +
+  ggtitle("Stem Circumfrence, below infloresence") + 
+  xlab("Genotype") + 
+  ylab("Circumfrence (cm)") +
+  theme(plot.title = element_text(hjust = .5)) 
+summary(lmer(stem_circ_4 ~ genotype + (1|germ), data=flower))
 ```
 
