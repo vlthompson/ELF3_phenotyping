@@ -78,7 +78,7 @@ summary(lmer(days.g2a ~ genotype + (1|germ), data=flower))
 flower %>%
   ggplot(aes(genotype, days.g2f)) +
   geom_boxplot() +
-  ggtitle("DAS to anthesis") + 
+  ggtitle("DAS to end of anthesis") + 
   xlab("Genotype") + 
   ylab("Days") +
   theme(plot.title = element_text(hjust = .5)) 
