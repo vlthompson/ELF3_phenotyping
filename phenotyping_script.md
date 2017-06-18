@@ -54,8 +54,6 @@ Veronica
 
 ```r
 (flower <- raw.flower %>%
-#  col_types = cols(
-#    genotype = col_factor(levels = "GV_WT", "ELF3_mutant")) %>%
   filter(ugly == FALSE) %>% 
   mutate(
     days.g2p = parse_integer(petals - germ),
@@ -498,7 +496,7 @@ summary(lmer(internodes ~ genotype + (1|germ), data=flower))
 
 ```r
 flower %>%
-  ggplot(aes(genotype, leaves)) +
+  ggplot(aes(genotype, leaves, color = genotype)) +
   geom_boxplot() +
   ggtitle("Number of leaves") + 
   xlab("Genotype") + 
